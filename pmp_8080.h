@@ -17,6 +17,8 @@
 #define PMD_LAT LATD
 #define PMD_PORT PORTD
 
+#define PMA_MAX (1U)
+
 
 #ifdef	__cplusplus
 extern "C" {
