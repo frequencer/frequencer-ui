@@ -9,6 +9,7 @@
 #define	PMP_8080_H
 
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <xc.h>
 
@@ -27,8 +28,11 @@ extern "C" {
 
 void pmp_init (void);
 
-void pmp_write (uint8_t address, uint8_t data);
-uint8_t pmp_read (uint8_t address);
+void pmp_write (bool is_data, uint8_t data);
+uint8_t pmp_read (void);
+
+void pmp_write_bytes (uint8_t count, uint8_t * in);
+void pmp_read_bytes (uint8_t count, uint8_t * out);
 
 
 #ifdef	__cplusplus

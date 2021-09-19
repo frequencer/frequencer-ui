@@ -1,8 +1,13 @@
+// 8080 8-bit parallel port using same pins as PMP peripheral
+// plus some protocol awareness of the ST7789V2 D/CX signal
+
 #define _XTAL_FREQ (8000000)
 
 #include "gpio.h"
 #include "pmp_8080.h"
 
+#include <stdbool.h>
+#include <stdint.h>
 #include <xc.h>
 
 void
@@ -12,14 +17,9 @@ pmp_init (void)
 }
 
 void
-pmp_write (uint8_t address, uint8_t data)
+pmp_write (bool is_data, uint8_t data)
 {
-	if (address > PMA_MAX)
-	{
-		return; // HANG_HERE
-	}
-
-	PMA0_Set(address);
+	PMA0_Set(is_data);
 	PMCS1_SetLow();
 	PMD_LAT = data;
 	PMWR_SetLow();
@@ -30,16 +30,11 @@ pmp_write (uint8_t address, uint8_t data)
 }
 
 uint8_t
-pmp_read (uint8_t address)
+pmp_read (void)
 {
 	uint8_t out;
 
-	if (address > PMA_MAX)
-	{
-		return 0; // HANG_HERE
-	}
-
-	PMA0_Set(address);
+	PMA0_SetHigh();
 	PMCS1_SetLow();
 	PMD_TRIS = 0xFF;
 	PMRD_SetLow();
@@ -49,4 +44,73 @@ pmp_read (uint8_t address)
 	PMCS1_SetHigh();
 
 	return out;
+}
+
+
+void
+pmp_write_bytes (uint8_t count, uint8_t * in)
+{
+	uint8_t idx = 0;
+
+	if (count < 1)
+	{
+		return;
+	}
+
+	if (count > (UINT8_MAX - 1))
+	{
+		// while loop will never exit
+		return; // HANG_HERE
+	}
+
+	PMA0_SetLow();
+	PMCS1_SetLow();
+	PMD_LAT = in[idx];
+	PMWR_SetLow();
+	PMD_TRIS = 0x00;
+	PMWR_SetHigh();
+	PMA0_SetHigh();
+
+	while (idx < count)
+	{
+		PMWR_SetLow();
+		PMD_LAT = in[idx];
+		PMWR_SetHigh();
+		idx++;
+	}
+
+	PMD_TRIS = 0xFF;
+	PMCS1_SetHigh();
+}
+
+void
+pmp_read_bytes (uint8_t count, uint8_t * out)
+{
+	uint8_t idx = 0;
+
+	if (count < 1)
+	{
+		return;
+	}
+
+	if (count > (UINT8_MAX - 1))
+	{
+		// while loop will never exit
+		return; // HANG_HERE
+	}
+
+	PMA0_SetHigh();
+	PMCS1_SetLow();
+	PMD_TRIS = 0xFF;
+
+	while (idx < count)
+	{
+		PMRD_SetLow();
+		// asm("nop"); // might be necessary for reading frame memory
+		out[idx] = PMD_PORT;
+		PMRD_SetHigh();
+		idx++;
+	}
+
+	PMCS1_SetHigh();
 }
