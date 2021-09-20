@@ -50,7 +50,7 @@ pmp_read (void)
 void
 pmp_write_bytes (uint8_t count, uint8_t * in)
 {
-	uint8_t idx = 0;
+	uint8_t idx = 1;
 
 	if (count < 1)
 	{
@@ -65,7 +65,7 @@ pmp_write_bytes (uint8_t count, uint8_t * in)
 
 	PMA0_SetLow();
 	PMCS1_SetLow();
-	PMD_LAT = in[idx];
+	PMD_LAT = in[0];
 	PMWR_SetLow();
 	PMD_TRIS = 0x00;
 	PMWR_SetHigh();
