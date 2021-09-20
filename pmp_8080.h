@@ -32,6 +32,7 @@ void pmp_write (bool is_data, uint8_t data);
 uint8_t pmp_read (void);
 
 void pmp_write_bytes (uint8_t count, uint8_t * in);
+void pmp_write_repeat (uint8_t count, uint8_t * in, uint16_t count_out, uint8_t rpt_size);
 void pmp_read_bytes (uint8_t count, uint8_t * out);
 
 

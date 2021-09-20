@@ -84,6 +84,49 @@ pmp_write_bytes (uint8_t count, uint8_t * in)
 }
 
 void
+pmp_write_repeat (uint8_t count, uint8_t * in, uint16_t count_out, uint8_t rpt_size)
+{
+	uint8_t idx = 1;
+	uint16_t real_idx = 1;
+
+	if (count_out < 1)
+	{
+		return;
+	}
+
+	if (count_out > (UINT16_MAX - 1))
+	{
+		// while loop will never exit
+		return; // HANG_HERE
+	}
+
+	PMA0_SetLow();
+	PMCS1_SetLow();
+	PMD_LAT = in[0];
+	PMWR_SetLow();
+	PMD_TRIS = 0x00;
+	PMWR_SetHigh();
+	PMA0_SetHigh();
+
+	while (real_idx < count_out)
+	{
+		PMWR_SetLow();
+		PMD_LAT = in[idx];
+		PMWR_SetHigh();
+		idx++;
+		real_idx++;
+
+		if (idx >= count)
+		{
+			idx -= rpt_size;
+		}
+	}
+
+	PMD_TRIS = 0xFF;
+	PMCS1_SetHigh();
+}
+
+void
 pmp_read_bytes (uint8_t count, uint8_t * out)
 {
 	uint8_t idx = 0;

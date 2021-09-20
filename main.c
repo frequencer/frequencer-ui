@@ -16,6 +16,32 @@ put_rgb565 (uint8_t red, uint8_t green, uint8_t blue, uint8_t * out)
 	out[1] |= (blue >> 3) & 0b00011111;
 }
 
+void
+draw_box16 (uint8_t x, uint16_t y, uint8_t red, uint8_t green, uint8_t blue)
+{
+	uint8_t dcmd[5];
+
+	dcmd[0] = 0x2A;
+	dcmd[1] = 0;
+	dcmd[2] = x;
+	x += 15;
+	dcmd[3] = 0;
+	dcmd[4] = x;
+	pmp_write_bytes(5, dcmd);
+
+	dcmd[0] = 0x2B;
+	dcmd[1] = y >> 8;
+	dcmd[2] = y & 0xFF;
+	y += 15;
+	dcmd[3] = y >> 8;
+	dcmd[4] = y & 0xFF;
+	pmp_write_bytes(5, dcmd);
+
+	dcmd[0] = 0x2C;
+	put_rgb565(red, green, blue, &(dcmd[1]));
+	pmp_write_repeat(3, dcmd, 16 * 16 * 2 + 1, 2);
+}
+
 
 void
 main (void)
@@ -77,19 +103,9 @@ main (void)
 		{
 			ANY_ON_Toggle();
 
-			uint16_t row = counter % 320;
-			dcmd2[0] = 0x2B;
-			dcmd2[1] = row >> 8;
-			dcmd2[2] = row & 0xFF;
-			row += 1;
-			dcmd2[3] = row >> 8;
-			dcmd2[4] = row & 0xFF;
-			pmp_write_bytes(5, dcmd2);
+			draw_box16((counter / 20) * 16, (counter % 20) * 16, 255, 100, 200);
 
-			gram[0] = 0x2C;
-			pmp_write_bytes(241, gram);
-
-			counter += 9;
+			counter += 1;
 			INTCON3bits.INT1IF = 0;
 		}
 	}
