@@ -1,7 +1,5 @@
-// 8080 8-bit parallel port using same pins as PMP peripheral
+// 8080 8-bit parallel port using PMP peripheral
 // plus some protocol awareness of the ST7789V2 D/CX signal
-
-#define _XTAL_FREQ (8000000)
 
 #include "gpio.h"
 #include "pmp_8080.h"
@@ -13,20 +11,24 @@
 void
 pmp_init (void)
 {
-	// nothing, we are just bit banging it right now
+	PMCONHbits.PMPEN = 0;
+	PMCONHbits.PTWREN = 1;
+	PMCONHbits.PTRDEN = 1;
+	PMCONLbits.CSF1 = 1;
+	PMCONLbits.CS2P = 1; // don't actually want to use that pin
+	PMMODEHbits.MODE = 0b10;
+	PMEHbits.PTEN14 = 1;
+	PMEHbits.PTEN15 = 1;
+	PMCONHbits.PMPEN = 1;
+	PMADDRHbits.CS1 = 1;
+	PMADDRHbits.CS2 = 0;
 }
 
 void
 pmp_write (bool is_data, uint8_t data)
 {
 	PMA0_Set(is_data);
-	PMCS1_SetLow();
-	PMD_LAT = data;
-	PMWR_SetLow();
-	PMD_TRIS = 0x00;
-	PMWR_SetHigh();
-	PMD_TRIS = 0xFF;
-	PMCS1_SetHigh();
+	PMDIN1L = data;
 }
 
 uint8_t
@@ -35,13 +37,8 @@ pmp_read (void)
 	uint8_t out;
 
 	PMA0_SetHigh();
-	PMCS1_SetLow();
-	PMD_TRIS = 0xFF;
-	PMRD_SetLow();
-	asm("nop");
-	out = PMD_PORT;
-	PMRD_SetHigh();
-	PMCS1_SetHigh();
+	out = PMDIN1L; // dummy read
+	out = PMDIN1L;
 
 	return out;
 }
@@ -64,23 +61,14 @@ pmp_write_bytes (uint8_t count, uint8_t * in)
 	}
 
 	PMA0_SetLow();
-	PMCS1_SetLow();
-	PMD_LAT = in[0];
-	PMWR_SetLow();
-	PMD_TRIS = 0x00;
-	PMWR_SetHigh();
+	PMDIN1L = in[0];
 	PMA0_SetHigh();
 
 	while (idx < count)
 	{
-		PMWR_SetLow();
-		PMD_LAT = in[idx];
-		PMWR_SetHigh();
+		PMDIN1L = in[idx];
 		idx++;
 	}
-
-	PMD_TRIS = 0xFF;
-	PMCS1_SetHigh();
 }
 
 void
@@ -101,18 +89,12 @@ pmp_write_repeat (uint8_t count, uint8_t * in, uint16_t count_out, uint8_t rpt_s
 	}
 
 	PMA0_SetLow();
-	PMCS1_SetLow();
-	PMD_LAT = in[0];
-	PMWR_SetLow();
-	PMD_TRIS = 0x00;
-	PMWR_SetHigh();
+	PMDIN1L = in[0];
 	PMA0_SetHigh();
 
 	while (real_idx < count_out)
 	{
-		PMWR_SetLow();
-		PMD_LAT = in[idx];
-		PMWR_SetHigh();
+		PMDIN1L = in[idx];
 		idx++;
 		real_idx++;
 
@@ -121,15 +103,12 @@ pmp_write_repeat (uint8_t count, uint8_t * in, uint16_t count_out, uint8_t rpt_s
 			idx -= rpt_size;
 		}
 	}
-
-	PMD_TRIS = 0xFF;
-	PMCS1_SetHigh();
 }
 
 void
 pmp_read_bytes (uint8_t count, uint8_t * out)
 {
-	uint8_t idx = 0;
+	uint8_t dummy, idx = 0;
 
 	if (count < 1)
 	{
@@ -143,17 +122,11 @@ pmp_read_bytes (uint8_t count, uint8_t * out)
 	}
 
 	PMA0_SetHigh();
-	PMCS1_SetLow();
-	PMD_TRIS = 0xFF;
+	dummy = PMDIN1L;
 
 	while (idx < count)
 	{
-		PMRD_SetLow();
-		// asm("nop"); // might be necessary for reading frame memory
-		out[idx] = PMD_PORT;
-		PMRD_SetHigh();
+		out[idx] = PMDIN1L;
 		idx++;
 	}
-
-	PMCS1_SetHigh();
 }

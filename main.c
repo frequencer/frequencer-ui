@@ -1,4 +1,4 @@
-#define _XTAL_FREQ (8000000)
+#define _XTAL_FREQ (48000000)
 
 #include "gpio.h"
 #include "pmp_8080.h"
@@ -46,6 +46,9 @@ draw_box16 (uint8_t x, uint16_t y, uint8_t red, uint8_t green, uint8_t blue)
 void
 main (void)
 {
+	OSCTUNEbits.PLLEN = 1;
+	__delay_ms(12);
+
 	gpio_init();
 	pmp_init();
 
@@ -102,11 +105,17 @@ main (void)
 		if (INTCON3bits.INT1IF)
 		{
 			ANY_ON_Toggle();
+			INTCON3bits.INT1IF = 0;
 
 			draw_box16((counter / 20) * 16, (counter % 20) * 16, 255, 100, 200);
 
 			counter += 1;
-			INTCON3bits.INT1IF = 0;
+			
+			if (INTCON3bits.INT1IF)
+			{
+				LED1_Toggle();
+				INTCON3bits.INT1IF = 0;
+			}
 		}
 	}
 }
